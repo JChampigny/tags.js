@@ -1,0 +1,493 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+
+<head>
+  <title>RegExp - Prototype</title>
+
+  <style>
+
+    body { font-family: Verdana,helvetica,arial,clean,sans-serif; font-size: 12px; }
+    ul { list-style-type: none; padding: 0px; margin: 0px; }
+    a { text-decoration: none; color: #000; }
+
+    button {
+      width: 50px;
+      height: 32px;
+      background: none;
+      cursor: pointer;
+      text-align: center;
+      border: 1px #d7d7d7 solid;
+      -moz-border-radius: 3px;
+      -webkit-border-radius: 3px;
+      font-weight: bold;
+    }
+
+    #container {
+      width: 400px;
+      height: 100%;
+      margin: 50px auto;
+    }
+
+    #selection {
+      width: 400px;
+      margin-bottom: 20px;;
+    }
+
+    #selection input {
+      height: 28px;
+      width: 200px;
+      -webkit-box-shadow: inset 0 2px 5px rgba(0,0,0,.35);
+      -moz-box-shadow: input 0 2px 5px rgba(0,0,0,.35);
+      box-shadow:inset 0 2px 5px rgba(0,0,0,.35);
+      border: 1px #fff solid;
+      border-bottom: 1px solid #d7d7d7;
+      text-indent: 10px;
+    }
+
+    #selection button {
+      float: right;
+      margin: 1px 0 0 20px;
+    }
+
+    .button-wrapper {
+      height: 29px;
+      float: left;
+      margin-top: 1px;
+      margin-right: 10px;
+    }
+
+    .button-wrapper a {
+      width: 100%;
+      height: 29px;
+      display: block;
+      border: 1px #d7d7d7 solid;
+    }
+
+    .button-wrapper span {
+      float: left;
+      height: 29px;
+      padding: 7px;
+    }
+
+    #list {
+      width: 400px;
+      height: 200px;
+      margin-bottom: 20px;
+      -webkit-box-shadow: inset 0 2px 5px rgba(0,0,0,.35);
+      -moz-box-shadow: inset 0 2px 5px rgba(0,0,0,.35);
+      box-shadow:inset 0 2px 5px rgba(0,0,0,.35);
+      border-bottom: 1px solid #d7d7d7;
+    }
+
+    #list ul {
+      padding: 5px;
+    }
+
+    .li-tag {
+      float: left;
+      margin: 5px;
+      -moz-border-radius: 5px;
+      -webkit-border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #regexp-text {
+      margin: 8px;
+      border: none;
+    }
+
+    #regexp-text:focus{
+      outline: none;
+    }
+
+    .tag-container {
+      height: 100%;
+      float: left;
+      -moz-border-radius: 5px;
+      -webkit-border-radius: 5px;
+    }
+
+    .contains {
+      background-color: #74ca58;
+    }
+
+    .without {
+      background-color: #D4767A;
+    }
+
+    li.contains {
+      background-color: #c8e9bd;
+    }
+
+    li.without {
+      background-color: #f3dcdd;
+    }
+
+    .operator {
+      margin: 5px;
+      float: left;
+      vertical-align: middle;
+    }
+
+    .tag {
+      margin: 5px 2px 5px 5px;
+      float: left;
+      vertical-align: middle;
+    }
+
+    .remove-entry {
+      float: left;
+      margin: 2px 5px 2px 0;
+      width: 18px;
+      height: 18px;
+      vertical-align: middle;
+      background-image: url("img/delete.png");
+      background-position: 0 0;
+    }
+
+    .remove-entry:hover {
+      background-image: url("img/delete.png");
+      background-position: 18px 18px;
+    }
+
+    #save {
+      float: right;
+    }
+
+  </style>
+
+  <script type="text/javascript">
+    var currentLi = null;
+
+    function addTag(e) {
+      var div = document.getElementById("selection"),
+          list = document.getElementById("list").getElementsByTagName("ul")[0],
+          attrWrapper = div.getElementsByTagName("a"),
+          tag = div.getElementsByTagName("input")[0],
+          attr = [];
+
+      if (tag.value == "")
+        return error("Must filter with a tag");
+
+      for (var i in attrWrapper)
+        attr.push(attrWrapper[i].firstElementChild);
+
+      list.appendChild(createNewTag(attr, tag));
+      tag.value = "";
+
+      if (attr[0].parentNode.parentNode.style.display == "none") {
+        attr[0].parentNode.parentNode.style.display = "inline";
+      }
+    }
+
+    function typeTag(e) {
+      e = e || window.event;
+
+      var div = document.getElementById("selection"),
+        attrWrapper = div.getElementsByTagName("a"),
+        tag = div.getElementsByTagName("input")[0],
+        attr = [];
+
+      for (var i in attrWrapper)
+        attr.push(attrWrapper[i].firstElementChild);
+
+      if (e.keyCode == 13) {
+        tag.value = "";
+        currentLi = null;
+
+        if (attr[0].parentNode.parentNode.style.display == "none") {
+          attr[0].parentNode.parentNode.style.display = "inline";
+        }
+      }
+      else {
+        currentLi = createOrUpdateNewTag(attr, tag);
+      }
+    }
+
+    function parseTag(e) {
+      e = e || window.event;
+
+      var attr = [],
+          str,
+          hasOperator = false,
+          hasNegation = false,
+          index = 0;
+
+      str = e.target.value;
+      str = str.split(" ");
+
+      attr[0] = document.getElementById("operator");
+      attr[1] = document.getElementById("contains");
+
+      if (str[0].toLowerCase() == "or") {
+        hasOperator = true;
+
+        if (attr[0].innerHTML == "And")
+          attr[0].parentNode.onclick();
+      } else {
+        if (str[0].toLowerCase() == "and")
+          hasOperator = true;
+
+        if (attr[0].innerHTML == "Or")
+          attr[0].parentNode.onclick();
+      }
+
+      if (hasOperator)
+        index++;
+
+      if (typeof str[index] !== "undefined" && str[index] == "not") {
+        hasNegation = true;
+
+        if (str[index].toLowerCase() == "not")
+          if (attr[1].innerHTML == "Contains")
+            attr[1].parentNode.onclick();
+        else
+          if (attr[1].innerHTML == "Without")
+            attr[1].parentNode.onclick();
+      } else if (str[index] == "no" && attr[1].innerHTML == "Without") {
+        hasNegation = false;
+        attr[1].parentNode.onclick();
+      }
+
+      if (hasOperator && hasNegation && str[2] != "")
+        currentLi = createOrUpdateNewTag(attr, e.target);
+    }
+
+    function removeTag(e) {
+      e = e || window.event;
+
+      var list = document.getElementById("list").getElementsByTagName("ul")[0],
+          li;
+
+      if (e.target.tagName == "SPAN")
+        li = e.target.parentNode.parentNode;
+      else if (e.target.tagName == "INPUT") {
+        for (var i in list.childNodes)
+          if (list.childNodes[i] == currentLi) {
+            li = list.childNodes[i];
+            break;
+          }
+      }
+
+      list.removeChild(li);
+
+      if (list.getElementsByTagName("li").length == 0) {
+        document.getElementById("operator").parentNode.parentNode.style.display = "none";
+      } else {
+        var name = list.firstElementChild.getElementsByClassName("operator")[0];
+
+        if (list.getElementsByTagName("li").length == 1) {
+          name.style.display = "none";
+        } else if (name.innerHTML.indexOf("And") == 0)
+          name.style.display = "none";
+        else if (name.innerHTML.indexOf("Or") == 0)
+          name.style.display = "none";
+      }
+    }
+
+    function createNewTag(attr, tag) {
+      var li = document.createElement("li");
+      var divTag = document.createElement("div");
+      var spanOperator = document.createElement("span");
+      var spanTag = document.createElement("span");
+      var spanRemove = document.createElement("span");
+      var input = document.createElement("input");
+
+      li.className = "li-tag " + attr[1].innerHTML.toLowerCase();
+
+      spanOperator.className = "operator";
+      spanOperator.innerHTML = attr[0].innerHTML;
+
+      if (attr[0].parentNode.parentNode.style.display == "none") {
+        spanOperator.style.display = "none";
+      }
+
+      spanTag.className = "tag";
+      spanTag.innerHTML = tag.value;
+
+      spanRemove.className = "remove-entry";
+      spanRemove.title = "Remove entry";
+      spanRemove.onclick = removeTag;
+
+      input.type = "hidden";
+      input.value = ((attr[0].style.display == "none") ? "" : attr[0].innerHTML.toLowerCase() + " ") +
+        ((attr[1].innerHTML == "Without") ? "not " : "") +
+        tag.value;
+
+      divTag.className = "tag-container " + attr[1].innerHTML.toLowerCase();
+      divTag.appendChild(spanTag);
+      divTag.appendChild(spanRemove);
+
+      li.appendChild(spanOperator);
+      li.appendChild(divTag);
+      li.appendChild(input);
+
+      return li;
+    }
+
+    function createOrUpdateNewTag(attr, tag) {
+      var list = document.getElementById("list").getElementsByTagName("ul")[0];
+      var li;
+
+      if (currentLi == null && tag.value != "") {
+        li = createNewTag(attr, tag);
+        list.insertBefore(li, document.getElementById("regexp-text"));
+      } else if (currentLi != null) {
+        for (var i in list.childNodes)
+          if (list.childNodes[i] == currentLi) {
+            li = list.childNodes[i];
+            break;
+          }
+
+        if (tag.value == "") {
+          li.getElementsByClassName("remove-entry")[0].onclick();
+          return null;
+        }
+
+        li.className = "li-tag " + attr[1].innerHTML.toLowerCase();
+        li.getElementsByClassName("tag")[0].innerHTML = tag.value;
+        li.getElementsByClassName("operator")[0].innerHTML = attr[0].innerHTML;
+        li.getElementsByClassName("tag-container")[0].className = "tag-container " + attr[1].innerHTML.toLowerCase();
+        li.getElementsByTagName("input")[0].value = ((attr[0].parentNode.parentNode.style.display == "none")
+          ? ""
+          : attr[0].innerHTML.toLowerCase() + " ") +
+          ((attr[1].innerHTML == "Without")
+            ? "not "
+            : "")
+          + tag.value;
+      }
+
+      return li;
+    }
+
+    function changeOperator(e) {
+      e = e || window.event;
+
+      var target = e.target;
+      if (target.tagName == "A")
+        target = target.firstElementChild;
+
+      target.innerHTML = (target.innerHTML == "And") ? "Or" : "And";
+
+      if (currentLi == null)
+        return;
+
+      var list = document.getElementById("list").getElementsByTagName("ul")[0],
+        li;
+
+      for (var i in list.childNodes)
+        if (list.childNodes[i] == currentLi) {
+          li = list.childNodes[i];
+          break;
+        }
+
+      li.getElementsByClassName("operator")[0].innerHTML = target.innerHTML;
+      li.getElementsByTagName("input")[0].value = (target.style.display == "none")
+        ? li.getElementsByTagName("input")[0].value
+        : target.innerHTML.toLowerCase() + " " + li.getElementsByTagName("input").value;
+
+      currentLi = li;
+    }
+
+    function changeNegation(e) {
+      e = e || window.event;
+
+      var target = e.target;
+
+      if (target.tagName == "A")
+        target = target.firstElementChild;
+      else if (target.tagName == "INPUT")
+        target = document.getElementById("contains");
+
+      var parent = target.parentNode;
+
+      target.innerHTML = (target.innerHTML == "Contains") ? "Without" : "Contains";
+      parent.className = parent.className.replace(
+        (parent.className == "contains") ? "contains" : "without",
+        (parent.className == "contains") ? "without" : "contains"
+      );
+
+      if (currentLi == null)
+        return;
+
+      var list = document.getElementById("list").getElementsByTagName("ul")[0],
+          li;
+
+      for (var i in list.childNodes)
+        if (list.childNodes[i] == currentLi) {
+          li = list.childNodes[i];
+          break;
+        }
+
+      li.className = "li-tag " + target.innerHTML.toLowerCase();
+      li.getElementsByClassName("tag-container")[0].className = "tag-container " + target.innerHTML.toLowerCase();
+
+      if (list.childNodes.length == 1)
+        li.getElementsByTagName("input")[0].value = (target.innerHTML == "Without")
+          ? "not " + li.getElementsByTagName("input")[0].value
+          : li.getElementsByTagName("input")[0].value.replace("not ", "");
+      else
+      li.getElementsByTagName("input")[0].value = (target.innerHTML == "Without")
+        ? li.getElementsByTagName("input")[0].value.replace("", "not ")
+        : li.getElementsByTagName("input")[0].value.replace("not ", "");
+
+      currentLi = li;
+    }
+
+    function focusOnTextbox(e) {
+      e = e || window.event;
+
+      if (e.target.id != "list")
+        return;
+
+      document.getElementById("regexp-text").focus();
+    }
+
+    function error (msg) {
+
+    }
+
+  </script>
+
+</head>
+
+<body>
+
+  <div id="container">
+
+    <h1>Filter Tags</h1>
+
+    <div id="selection">
+      <span class="button-wrapper" title="And / Or">
+        <a href="javascript:void(0);" onclick="changeOperator()">
+          <span id="operator">And</span>
+        </a>
+      </span>
+      <span class="button-wrapper" title="Contains / Whitout">
+        <a class="contains" href="javascript:void(0);" onclick="changeNegation()">
+          <span id="contains">Contains</span>
+        </a>
+      </span>
+      <input type="text" name="tag" onkeyup="typeTag();" />
+      <!--<button type="button" onclick="addTag();">Add</button>-->
+    </div>
+
+    <div id="list" onclick="focusOnTextbox();">
+      <ul>
+        <input type="text" id="regexp-text" onkeyup="parseTag();"/>
+      </ul>
+    </div>
+
+    <button type="button" id="save">Save</button>
+  </div>
+
+  <script type="text/javascript">
+
+    if (document.getElementById("list").getElementsByTagName("ul")[0].getElementsByTagName("li").length == 0) {
+      document.getElementById("operator").parentNode.parentNode.style.display = "none";
+    }
+
+  </script>
+
+</body>
+</html>
